@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/sidebar';
 import './customers.css';
+import api from '../../api';
 
 export default function Customers({ onNavigate }) {
   const [showCustomers, setShowCustomers] = useState(true);
@@ -10,75 +11,21 @@ export default function Customers({ onNavigate }) {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Temporary customer data
-  const [customers, setCustomers] = useState([
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      email: 'rajesh@example.com',
-      phone: '+91-9876543210',
-      plan: 'Premium',
-      status: 'Active',
-      joinDate: '2024-01-15',
-      paymentStatus: 'Completed',
-      amount: 800,
-      bandwidth: '100 Mbps'
-    },
-    {
-      id: 2,
-      name: 'Priya Singh',
-      email: 'priya@example.com',
-      phone: '+91-9876543211',
-      plan: 'Elite',
-      status: 'Active',
-      joinDate: '2024-02-20',
-      paymentStatus: 'Pending',
-      amount: 1500,
-      bandwidth: '500 Mbps'
-    },
-    {
-      id: 3,
-      name: 'Amit Patel',
-      email: 'amit@example.com',
-      phone: '+91-9876543212',
-      plan: 'Standard',
-      status: 'Active',
-      joinDate: '2024-03-10',
-      paymentStatus: 'Pending',
-      amount: 400,
-      bandwidth: '50 Mbps'
-    },
-    {
-      id: 4,
-      name: 'Neha Sharma',
-      email: 'neha@example.com',
-      phone: '+91-9876543213',
-      plan: 'Premium',
-      status: 'Inactive',
-      joinDate: '2024-01-05',
-      paymentStatus: 'Overdue',
-      amount: 800,
-      bandwidth: '100 Mbps'
-    },
-    {
-      id: 5,
-      name: 'Vikram Desai',
-      email: 'vikram@example.com',
-      phone: '+91-9876543214',
-      plan: 'Standard',
-      status: 'Active',
-      joinDate: '2024-03-22',
-      paymentStatus: 'Completed',
-      amount: 400,
-      bandwidth: '50 Mbps'
-    }
-  ]);
+  const [customers, setCustomers] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
+    connectionType: 'DHCP',
     email: '',
     phone: '',
-    plan: 'Standard'
+    city: '',
+    address: '',
+    contactNumber: '',
+    zoneName: '',
+    plan: 'Standard',
+    registrationDate: new Date().toISOString().split('T')[0],
+    renewDate: '',
+    expiryDate: ''
   });
 
   const plans = ['Standard', 'Premium', 'Elite'];
@@ -108,26 +55,52 @@ export default function Customers({ onNavigate }) {
   const handleAddCustomer = (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone) {
-      alert('Please fill all fields');
+    if (!formData.name || !formData.contactNumber || !formData.email) {
+      alert('Please fill name, contact number and email');
       return;
     }
 
-    const newCustomer = {
-      id: customers.length + 1,
-      ...formData,
+    const payload = {
+      id: Date.now(),
+      name: formData.name,
+      connection_type: formData.connectionType,
+      email: formData.email,
+      city: formData.city,
+      address: formData.address,
+      contact_number: formData.contactNumber,
+      zone_name: formData.zoneName,
+      plan_name: formData.plan,
+      registration_date: formData.registrationDate,
+      renew_date: formData.renewDate,
+      expiry_date: formData.expiryDate,
       status: 'Active',
-      joinDate: new Date().toISOString().split('T')[0],
       paymentStatus: 'Pending',
       amount: planPrices[formData.plan],
       bandwidth: planBandwidth[formData.plan]
     };
 
-    setCustomers([...customers, newCustomer]);
-    setFormData({ name: '', email: '', phone: '', plan: 'Standard' });
+    api.createWifiCustomer(payload).then((res) => {
+      setCustomers([
+        ...customers,
+        { id: res.id || payload.id, ...payload }
+      ]);
+    }).catch((err) => {
+      console.error(err);
+      alert('Failed to add customer');
+    });
+    setFormData({ name: '', connectionType: 'DHCP', email: '', phone: '', city: '', address: '', contactNumber: '', zoneName: '', plan: 'Standard', registrationDate: new Date().toISOString().split('T')[0], renewDate: '', expiryDate: '' });
     setShowModal(false);
     alert('Customer added successfully!');
   };
+
+  useEffect(() => {
+    let mounted = true;
+    api.getWifiCustomers().then((data) => {
+      if (!mounted) return;
+      setCustomers(data || []);
+    }).catch((err) => console.error(err));
+    return () => { mounted = false };
+  }, []);
 
   const handleDeleteCustomer = (id) => {
     if (window.confirm('Are you sure you want to delete this customer?')) {
@@ -322,6 +295,18 @@ export default function Customers({ onNavigate }) {
                   required
                 />
               </div>
+                <div className="form-group">
+                  <label>Connection Type</label>
+                  <select
+                    value={formData.connectionType}
+                    onChange={(e) => setFormData({...formData, connectionType: e.target.value})}
+                  >
+                    <option value="DHCP">DHCP</option>
+                    <option value="PPPoE">PPPoE</option>
+                    <option value="Static">Static</option>
+                    <option value="Wireless">Wireless</option>
+                  </select>
+                </div>
               <div className="form-group">
                 <label>Email Address</label>
                 <input
@@ -332,6 +317,24 @@ export default function Customers({ onNavigate }) {
                   required
                 />
               </div>
+                <div className="form-group">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                    placeholder="City"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="Address"
+                  />
+                </div>
               <div className="form-group">
                 <label>Phone Number</label>
                 <input
@@ -342,6 +345,24 @@ export default function Customers({ onNavigate }) {
                   required
                 />
               </div>
+                <div className="form-group">
+                  <label>Contact Number</label>
+                  <input
+                    type="tel"
+                    value={formData.contactNumber}
+                    onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+                    placeholder="Contact number"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Zone Name</label>
+                  <input
+                    type="text"
+                    value={formData.zoneName}
+                    onChange={(e) => setFormData({...formData, zoneName: e.target.value})}
+                    placeholder="Zone/Area name"
+                  />
+                </div>
               <div className="form-group">
                 <label>Plan</label>
                 <select
@@ -355,6 +376,30 @@ export default function Customers({ onNavigate }) {
                   ))}
                 </select>
               </div>
+                <div className="form-group">
+                  <label>Registration Date</label>
+                  <input
+                    type="date"
+                    value={formData.registrationDate}
+                    onChange={(e) => setFormData({...formData, registrationDate: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Renew Date</label>
+                  <input
+                    type="date"
+                    value={formData.renewDate}
+                    onChange={(e) => setFormData({...formData, renewDate: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Expiry Date</label>
+                  <input
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                  />
+                </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>
                   Cancel

@@ -1,25 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/sidebar';
 import './dashboard.css';
+import api from '../../api';
 
 export default function Dashboard({ onNavigate }) {
   // Sample data
   const [showDashboard, setShowDashboard] = useState(true);
-  const [analytics] = useState({
-    totalConnections: 1850,
-    totalConnectionsGrowth: '+15%',
-    activeUsers: 1250,
-    activeUsersGrowth: '+8%',
-    totalBandwidth: '2.5 TB',
-    bandwidthGrowth: '+22%',
-    uptime: '99.8%',
-    uptimeGrowth: '+0.2%',
-    nodes: [
-      { name: 'North Zone', connections: 450, percentage: 24, color: '#3b82f6', growth: '+12%' },
-      { name: 'Central Zone', connections: 780, percentage: 42, color: '#8b5cf6', growth: '+18%' },
-      { name: 'South Zone', connections: 620, percentage: 34, color: '#06b6d4', growth: '+10%' }
-    ]
+  const [analytics, setAnalytics] = useState({
+    totalConnections: 0,
+    activeUsers: 0,
+    totalBandwidth: '0 GB',
+    uptime: '100%',
+    nodes: []
   });
+
+  useEffect(() => {
+    let mounted = true;
+    api.getWifiSummary().then((data) => {
+      if (!mounted) return;
+      setAnalytics((prev) => ({ ...prev, totalConnections: data.totalCustomers || 0, activeUsers: data.activeCustomers || 0, totalBandwidth: prev.totalBandwidth, uptime: prev.uptime }));
+    }).catch((err) => console.error(err));
+    return () => { mounted = false };
+  }, []);
 
   return (
     <div className="dashboard-wrapper">

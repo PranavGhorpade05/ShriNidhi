@@ -1,25 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/sidebar';
 import './dashboard.css';
+import api from '../../api';
 
 export default function Dashboard({ onNavigate }) {
   // Sample data
   const [showDashboard, setShowDashboard] = useState(true);
-  const [analytics] = useState({
-    totalCustomers: 1250,
-    totalCustomersGrowth: '+12%',
-    pendingPayments: 45,
-    pendingPaymentsGrowth: '-5%',
-    totalRevenue: '$125,500',
-    revenueGrowth: '+18%',
-    conversionRate: '68.5%',
-    conversionGrowth: '+3%',
-    plans: [
-      { name: 'Basic Plan', count: 450, percentage: 36, color: '#3b82f6', growth: '+8%' },
-      { name: 'Professional Plan', count: 580, percentage: 46, color: '#8b5cf6', growth: '+15%' },
-      { name: 'Enterprise Plan', count: 220, percentage: 18, color: '#06b6d4', growth: '+22%' }
-    ]
+  const [analytics, setAnalytics] = useState({
+    totalCustomers: 0,
+    pendingPayments: 0,
+    totalRevenue: 0,
+    plans: []
   });
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCabelSummary().then((data) => {
+      if (!mounted) return;
+      setAnalytics((prev) => ({ ...prev, totalCustomers: data.totalCustomers || 0, pendingPayments: data.pendingInvoices || 0, totalRevenue: data.totalRevenue || 0 }));
+    }).catch((err) => console.error(err));
+    return () => { mounted = false };
+  }, []);
 
   return (
     <div className="dashboard-wrapper">

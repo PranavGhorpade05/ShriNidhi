@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/sidebar';
 import './customers.css';
+import api from '../../api';
 
 export default function Customers({ onNavigate }) {
   const [showCustomers, setShowCustomers] = useState(true);
@@ -10,64 +11,7 @@ export default function Customers({ onNavigate }) {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Temporary customer data - Easy to replace with API call
-  const [customers, setCustomers] = useState([
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      email: 'rajesh@example.com',
-      phone: '+91-9876543210',
-      plan: 'Professional',
-      status: 'Active',
-      joinDate: '2024-01-15',
-      paymentStatus: 'Completed',
-      amount: 500
-    },
-    {
-      id: 2,
-      name: 'Priya Singh',
-      email: 'priya@example.com',
-      phone: '+91-9876543211',
-      plan: 'Enterprise',
-      status: 'Active',
-      joinDate: '2024-02-20',
-      paymentStatus: 'Pending',
-      amount: 1200
-    },
-    {
-      id: 3,
-      name: 'Amit Patel',
-      email: 'amit@example.com',
-      phone: '+91-9876543212',
-      plan: 'Basic',
-      status: 'Active',
-      joinDate: '2024-03-10',
-      paymentStatus: 'Pending',
-      amount: 200
-    },
-    {
-      id: 4,
-      name: 'Neha Sharma',
-      email: 'neha@example.com',
-      phone: '+91-9876543213',
-      plan: 'Professional',
-      status: 'Inactive',
-      joinDate: '2024-01-05',
-      paymentStatus: 'Overdue',
-      amount: 500
-    },
-    {
-      id: 5,
-      name: 'Vikram Desai',
-      email: 'vikram@example.com',
-      phone: '+91-9876543214',
-      plan: 'Basic',
-      status: 'Active',
-      joinDate: '2024-03-22',
-      paymentStatus: 'Completed',
-      amount: 200
-    }
-  ]);
+  const [customers, setCustomers] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -105,20 +49,38 @@ export default function Customers({ onNavigate }) {
       return;
     }
 
-    const newCustomer = {
-      id: customers.length + 1,
-      ...formData,
-      status: 'Active',
-      joinDate: new Date().toISOString().split('T')[0],
-      paymentStatus: 'Pending',
-      amount: planPrices[formData.plan]
+    const payload = {
+      customer_code: `CABL${Date.now()}`,
+      name: formData.name,
+      address: '',
+      phone: formData.phone,
+      plan: formData.plan,
+      connected_on: new Date().toISOString().split('T')[0]
     };
 
-    setCustomers([...customers, newCustomer]);
+    api.createCabelCustomer(payload).then((res) => {
+      // append returned id and local fields
+      setCustomers([...
+        customers,
+        { id: res.id, name: formData.name, email: formData.email, phone: formData.phone, plan: formData.plan, status: 'Active', joinDate: payload.connected_on, paymentStatus: 'Pending', amount: planPrices[formData.plan] }
+      ]);
+    }).catch((err) => {
+      console.error(err);
+      alert('Failed to add customer');
+    });
     setFormData({ name: '', email: '', phone: '', plan: 'Basic' });
     setShowModal(false);
     alert('Customer added successfully!');
   };
+
+  useEffect(() => {
+    let mounted = true;
+    api.getCabelCustomers().then((data) => {
+      if (!mounted) return;
+      setCustomers(data || []);
+    }).catch((err) => console.error(err));
+    return () => { mounted = false };
+  }, []);
 
   // Delete customer
   const handleDeleteCustomer = (id) => {

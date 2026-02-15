@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'
 import './sidebar.css';
 
-export default function Sidebar({ onNavigate }) {
+export default function Sidebar() {
   const [activeMenu, setActiveMenu] = useState('dashboard');
+  const navigate = useNavigate()
 
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
-    if (onNavigate) {
-      onNavigate(menu);
-    }
+    // navigate to wifi routes
+    if (menu === 'dashboard') navigate('/wifi')
+    if (menu === 'customers') navigate('/wifi/customers')
+    if (menu === 'plans') navigate('/wifi/zones')
   };
 
   return (

@@ -1,7 +1,10 @@
 import { MdTv, MdWifi } from 'react-icons/md';
+import { useNavigate } from 'react-router-dom'
 import './landingPage.css';
 
-const LandingPage = ({ onSelectService }) => {
+const LandingPage = () => {
+  const navigate = useNavigate()
+
   return (
     <div className="landing-page">
       <div className="landing-header">
@@ -10,7 +13,7 @@ const LandingPage = ({ onSelectService }) => {
       </div>
 
       <div className="cards-container">
-        <div className="card" onClick={() => onSelectService('cabel')}>
+        <div className="card" onClick={() => navigate('/cabel')}>
           <div className="card-icon">
             <MdTv size={50}/>
           </div>
@@ -22,7 +25,7 @@ const LandingPage = ({ onSelectService }) => {
         </div>
 
         {/* Card 2: Wi-Fi Management */}
-        <div className="card" onClick={() => onSelectService('wifi')}>
+        <div className="card" onClick={() => navigate('/wifi')}>
           <div className="card-icon">
             <MdWifi size={50}/>
           </div>
