@@ -111,11 +111,16 @@ export default function Customers({ onNavigate }) {
 
   // Update payment status
   const handleUpdatePaymentStatus = (id, status) => {
-    setCustomers(
-      customers.map(c =>
-        c.id === id ? { ...c, paymentStatus: status } : c
-      )
-    );
+    api.updateCabelPaymentStatus(id, status).then((res) => {
+      setCustomers(
+        customers.map(c =>
+          c.id === id ? { ...c, payment_status: status, paymentStatus: status } : c
+        )
+      );
+    }).catch((err) => {
+      console.error(err);
+      alert('Failed to update payment status');
+    });
   };
 
   return (
@@ -220,8 +225,8 @@ export default function Customers({ onNavigate }) {
                       </td>
                       <td>
                         <select
-                          className={`payment-status-select ${customer.paymentStatus.toLowerCase()}`}
-                          value={customer.paymentStatus}
+                          className={`payment-status-select ${(customer.payment_status || customer.paymentStatus || 'Pending').toLowerCase()}`}
+                          value={customer.payment_status || customer.paymentStatus || 'Pending'}
                           onChange={(e) => handleUpdatePaymentStatus(customer.id, e.target.value)}
                         >
                           <option value="Completed">Completed</option>

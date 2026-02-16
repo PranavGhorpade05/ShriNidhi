@@ -26,7 +26,7 @@ export default function Plans() {
 
   return (
     <div className="customers-wrapper">
-      <Sidebar onNavigate={onNavigate} />
+      <Sidebar />
       <div className="customers-content">
         <div className="customers-header">
           <div className="header-top">

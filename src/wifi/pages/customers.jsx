@@ -9,6 +9,7 @@ export default function Customers({ onNavigate }) {
   const [showModal, setShowModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [customers, setCustomers] = useState([]);
@@ -20,12 +21,19 @@ export default function Customers({ onNavigate }) {
     phone: '',
     city: '',
     address: '',
-    contactNumber: '',
+    contact_number: '',
     zoneName: '',
     plan: 'Standard',
     registrationDate: new Date().toISOString().split('T')[0],
     renewDate: '',
     expiryDate: ''
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    plan_name: '',
+    renew_date: '',
+    expiry_date: '',
+    status: 'Active'
   });
 
   const plans = ['Standard', 'Premium', 'Elite'];
@@ -47,7 +55,7 @@ export default function Customers({ onNavigate }) {
       customer.phone.includes(searchTerm);
 
     if (activeTab === 'pending') {
-      return matchesSearch && customer.paymentStatus === 'Pending';
+      return matchesSearch && customer.payment_status === 'Pending';
     }
     return matchesSearch;
   });
@@ -55,7 +63,7 @@ export default function Customers({ onNavigate }) {
   const handleAddCustomer = (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.contactNumber || !formData.email) {
+    if (!formData.name || !formData.contact_number || !formData.email) {
       alert('Please fill name, contact number and email');
       return;
     }
@@ -67,7 +75,7 @@ export default function Customers({ onNavigate }) {
       email: formData.email,
       city: formData.city,
       address: formData.address,
-      contact_number: formData.contactNumber,
+      contact_number: formData.contact_number,
       zone_name: formData.zoneName,
       plan_name: formData.plan,
       registration_date: formData.registrationDate,
@@ -88,7 +96,7 @@ export default function Customers({ onNavigate }) {
       console.error(err);
       alert('Failed to add customer');
     });
-    setFormData({ name: '', connectionType: 'DHCP', email: '', phone: '', city: '', address: '', contactNumber: '', zoneName: '', plan: 'Standard', registrationDate: new Date().toISOString().split('T')[0], renewDate: '', expiryDate: '' });
+    setFormData({ name: '', connectionType: 'DHCP', email: '', phone: '', city: '', address: '', contact_number: '', zoneName: '', plan: 'Standard', registrationDate: new Date().toISOString().split('T')[0], renewDate: '', expiryDate: '' });
     setShowModal(false);
     alert('Customer added successfully!');
   };
@@ -127,11 +135,48 @@ export default function Customers({ onNavigate }) {
   };
 
   const handleUpdatePaymentStatus = (id, status) => {
-    setCustomers(
-      customers.map(c =>
-        c.id === id ? { ...c, paymentStatus: status } : c
-      )
-    );
+    api.updateWifiPaymentStatus(id, status).then((res) => {
+      setCustomers(
+        customers.map(c =>
+          c.id === id ? { ...c, payment_status: status, paymentStatus: status } : c
+        )
+      );
+    }).catch((err) => {
+      console.error(err);
+      alert('Failed to update payment status');
+    });
+  };
+
+  const handleEditCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    setEditFormData({
+      plan_name: customer.plan_name || '',
+      renew_date: customer.renew_date || '',
+      expiry_date: customer.expiry_date || '',
+      status: customer.status || 'Active'
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+
+    api.updateWifiCustomer(selectedCustomer.id, editFormData).then((res) => {
+      setCustomers(
+        customers.map(c =>
+          c.id === selectedCustomer.id
+            ? { ...c, ...editFormData }
+            : c
+        )
+      );
+      setShowEditModal(false);
+      setSelectedCustomer(null);
+      alert('Customer updated successfully!');
+    }).catch((err) => {
+      console.error(err);
+      alert('Failed to update customer');
+    });
   };
 
   return (
@@ -161,7 +206,7 @@ export default function Customers({ onNavigate }) {
             </div>
             <div className="stat-card">
               <div className="stat-label">Pending Payments</div>
-              <div className="stat-value">{customers.filter(c => c.paymentStatus === 'Pending').length}</div>
+              <div className="stat-value">{customers.filter(c => c.payment_status === 'Pending').length}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">Active Customers</div>
@@ -224,13 +269,13 @@ export default function Customers({ onNavigate }) {
                         <span>{customer.name}</span>
                       </td>
                       <td>{customer.email}</td>
-                      <td>{customer.phone}</td>
+                      <td>{customer.contact_number}</td>
                       <td>
-                        <span className="plan-badge">{customer.plan}</span>
+                        <span className="plan-badge">{customer.plan_name}</span>
                       </td>
                       <td>{customer.bandwidth}</td>
                       <td className="amount">{`₹${customer.amount}`}</td>
-                      <td>{new Date(customer.joinDate).toLocaleDateString()}</td>
+                      <td>{new Date(customer.renew_date).toLocaleDateString()}</td>
                       <td>
                         <span className={`status-badge ${customer.status.toLowerCase()}`}>
                           {customer.status}
@@ -238,8 +283,8 @@ export default function Customers({ onNavigate }) {
                       </td>
                       <td>
                         <select
-                          className={`payment-status-select ${customer.paymentStatus.toLowerCase()}`}
-                          value={customer.paymentStatus}
+                          className={`payment-status-select ${customer.status.toLowerCase()}`}
+                          value={customer.payment_status || customer.paymentStatus || 'Pending'}
                           onChange={(e) => handleUpdatePaymentStatus(customer.id, e.target.value)}
                         >
                           <option value="Completed">Completed</option>
@@ -248,6 +293,13 @@ export default function Customers({ onNavigate }) {
                         </select>
                       </td>
                       <td className="actions-cell">
+                        <button
+                          className="action-btn edit-btn"
+                          onClick={() => handleEditCustomer(customer)}
+                          title="Edit Customer"
+                        >
+                          ✏️
+                        </button>
                         <button
                           className="action-btn plan-btn"
                           onClick={() => handleChangePlan(customer)}
@@ -349,8 +401,8 @@ export default function Customers({ onNavigate }) {
                   <label>Contact Number</label>
                   <input
                     type="tel"
-                    value={formData.contactNumber}
-                    onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+                    value={formData.contact_number}
+                    onChange={(e) => setFormData({...formData, contact_number: e.target.value})}
                     placeholder="Contact number"
                   />
                 </div>
@@ -438,6 +490,70 @@ export default function Customers({ onNavigate }) {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Modal */}
+      {showEditModal && selectedCustomer && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit WiFi Customer - {selectedCustomer.name}</h2>
+              <button className="close-btn" onClick={() => setShowEditModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="modal-form">
+              <div className="form-group">
+                <label>Plan Name</label>
+                <select
+                  value={editFormData.plan_name}
+                  onChange={(e) => setEditFormData({...editFormData, plan_name: e.target.value})}
+                >
+                  <option value="">Select a plan</option>
+                  {plans.map(plan => (
+                    <option key={plan} value={plan}>
+                      {plan} - {planBandwidth[plan]} - ₹{planPrices[plan]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Renew Date</label>
+                <input
+                  type="date"
+                  value={editFormData.renew_date}
+                  onChange={(e) => setEditFormData({...editFormData, renew_date: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Expiry Date</label>
+                <input
+                  type="date"
+                  value={editFormData.expiry_date}
+                  onChange={(e) => setEditFormData({...editFormData, expiry_date: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Suspended">Suspended</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-submit">
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

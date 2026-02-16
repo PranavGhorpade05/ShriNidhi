@@ -175,8 +175,9 @@
 .customers-table-section {
   background: white;
   border-radius: 12px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  scroll-behavior: smooth;
 }
 
 .customers-table {
@@ -321,6 +322,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.action-btn.edit-btn {
+  color: #f59e0b;
+}
+
+.action-btn.edit-btn:hover {
+  background: #fef3c7;
 }
 
 .action-btn.plan-btn {
